@@ -1,9 +1,9 @@
 {
-  "name": "vibervn-context-engine-linux-arm64",
+  "name": "context-engine-darwin-arm64",
   "version": "0.0.0",
-  "description": "vibervn-context-engine binary for Linux arm64",
+  "description": "context-engine binary for macOS arm64",
   "license": "SEE LICENSE IN LICENSE",
-  "os": ["linux"],
+  "os": ["darwin"],
   "cpu": ["arm64"],
   "files": ["bin", "LICENSE", "README.md"],
   "engines": { "node": ">=18" }

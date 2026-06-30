@@ -1,4 +1,4 @@
-# vibervn-context-engine
+# context-engine
 
 [English](README.md) · [Tiếng Việt](README-vi.md) · **中文**
 
@@ -10,24 +10,56 @@
 二进制文件。`@latest` 标签会强制 npx 拉取最新发布版本，而不是复用过期的缓存：
 
 ```bash
-npx vibervn-context-engine@latest
+npx context-engine@latest
 ```
 
 该命令会在 6699 端口启动 HTTP 服务器（Web 界面位于 http://127.0.0.1:6699，
 MCP 端点位于 `/mcp`）。所有 CLI 参数都会转发给二进制文件：
 
 ```bash
-npx vibervn-context-engine@latest --port 8080 --bind 0.0.0.0
+npx context-engine@latest --port 8080 --bind 0.0.0.0
 ```
 
-或者全局安装以获得持久的 `vibervn-context-engine` 命令：
+或者全局安装以获得持久的 `context-engine` 命令：
 
 ```bash
-npm install -g vibervn-context-engine@latest
-vibervn-context-engine --port 6699
+npm install -g context-engine@latest
+context-engine --port 6699
 ```
 
 支持的平台：Linux x64/arm64、macOS arm64、Windows x64。
+
+## 使用 9Router（OpenAI 兼容）嵌入端点
+
+context-engine 可以通过任何 OpenAI 兼容的 `/v1/embeddings` 端点进行嵌入，
+包括本地的 [9Router](https://localhost:20128) 网关。无需改动代码 —— 只需配置。
+
+打开 Web 界面（http://127.0.0.1:6699），进入 **Embedding Provider**，设置：
+
+| 字段 | 值 |
+|------|-----|
+| Provider | `OpenAI` |
+| Base URL | `http://localhost:20128/v1` |
+| Embedding model | 9Router 的模型字符串，例如 `emb/nomic-embed-text`（`<节点前缀>/<模型>`） |
+| API key | 若 9Router 启用了 `requireApiKey`，填写仪表盘生成的密钥；否则填任意非空占位值 |
+| Output dimensions | 除非模型需要 Matryoshka 截断，否则留空 |
+
+注意：
+
+- 代码会自行追加 `/embeddings`，因此 Base URL 必须是**基础**形式
+  `http://localhost:20128/v1`，**而不是** `…/v1/embeddings`（它也接受完整形式
+  且不会重复追加，但基础形式是约定）。最终请求为
+  `POST http://localhost:20128/v1/embeddings`，带 `Bearer` 认证头，请求体为
+  `{ "model": ..., "input": [...] }`，响应按 `{ "data": [{ "embedding": [...] }] }`
+  解析。
+- 模型必须是**嵌入**模型，而非聊天模型。在 9Router 中通常是一个
+  `custom-embedding` 提供方节点，将其 `prefix` 前缀加到模型名前（`<prefix>/<model>`）。
+- 至少需要一个 API key（没有任何 key 时客户端拒绝启动）。若 9Router 不需要
+  密钥，请填入任意占位值，例如 `local`。
+- **更改嵌入模型或输出维度会改变向量空间** —— 旧向量将不再兼容。更改后请删除
+  并重新索引所有仓库。
+- Voyage 和 OpenAI 云端默认行为不变；留空 Base URL 将完全像以前一样使用提供方
+  的官方端点。
 
 ## 功能特性
 

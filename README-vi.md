@@ -1,4 +1,4 @@
-# vibervn-context-engine
+# context-engine
 
 [English](README.md) · **Tiếng Việt** · [中文](README-zh.md)
 
@@ -12,7 +12,7 @@ sẽ tự động lấy đúng bản binary đã biên dịch sẵn cho nền t�
 cache cũ:
 
 ```bash
-npx vibervn-context-engine@latest
+npx context-engine@latest
 ```
 
 Lệnh này khởi động HTTP server ở cổng 6699 (Web UI tại
@@ -20,17 +20,52 @@ http://127.0.0.1:6699, MCP endpoint tại `/mcp`). Mọi cờ CLI đều đượ
 tiếp tới binary:
 
 ```bash
-npx vibervn-context-engine@latest --port 8080 --bind 0.0.0.0
+npx context-engine@latest --port 8080 --bind 0.0.0.0
 ```
 
-Hoặc cài đặt toàn cục để có lệnh `vibervn-context-engine` cố định:
+Hoặc cài đặt toàn cục để có lệnh `context-engine` cố định:
 
 ```bash
-npm install -g vibervn-context-engine@latest
-vibervn-context-engine --port 6699
+npm install -g context-engine@latest
+context-engine --port 6699
 ```
 
 Nền tảng được hỗ trợ: Linux x64/arm64, macOS arm64, Windows x64.
+
+## Dùng endpoint embedding OpenAI-compatible của 9Router
+
+context-engine có thể embedding qua bất kỳ endpoint `/v1/embeddings`
+tương thích OpenAI nào, bao gồm gateway [9Router](https://localhost:20128)
+chạy local. Không cần sửa code — chỉ cần chỉnh cấu hình.
+
+Mở Web UI (http://127.0.0.1:6699), vào mục **Embedding Provider** và đặt:
+
+| Trường | Giá trị |
+|--------|---------|
+| Provider | `OpenAI` |
+| Base URL | `http://localhost:20128/v1` |
+| Embedding model | chuỗi model của 9Router, ví dụ `emb/nomic-embed-text` (`<prefix-node>/<model>`) |
+| API key | key lấy từ dashboard 9Router nếu 9Router bật `requireApiKey`; nếu không thì điền giá trị dummy bất kỳ (khác rỗng) |
+| Output dimensions | để trống trừ khi model cần cắt Matryoshka |
+
+Lưu ý:
+
+- Code tự thêm `/embeddings`, nên Base URL phải là dạng **gốc**
+  `http://localhost:20128/v1`, **không** phải `…/v1/embeddings` (vẫn chấp nhận
+  dạng đầy đủ và không append đôi, nhưng dạng gốc là quy ước). Request kết quả
+  là `POST http://localhost:20128/v1/embeddings` kèm header `Bearer` và body
+  `{ "model": ..., "input": [...] }`, response parse theo
+  `{ "data": [{ "embedding": [...] }] }`.
+- Model phải là model **embedding**, không phải model chat. Trong 9Router đây
+  thường là provider node `custom-embedding` mà bạn ghép `prefix` vào trước tên
+  model (`<prefix>/<model>`).
+- Cần ít nhất một API key (client từ chối khởi động nếu không có key nào). Nếu
+  9Router không yêu cầu key, hãy dán một giá trị giữ chỗ như `local`.
+- **Đổi embedding model hoặc output dimension là đổi không gian vector** —
+  vector cũ trở nên không tương thích. Hãy xóa/re-index lại mọi repo sau khi
+  thay đổi.
+- Mặc định Voyage và OpenAI cloud không đổi; để trống Base URL sẽ dùng đúng
+  endpoint chính thức của provider như trước.
 
 ## Tính năng
 
