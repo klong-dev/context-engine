@@ -54,12 +54,12 @@ context-engine ──▶ 9Router /v1/embeddings ──▶ embedding provider nod
 
 Open the web UI (http://127.0.0.1:6699), go to **Embedding Provider**, and set:
 
-| Field | Value |
-|-------|-------|
-| Provider | `OpenAI` |
-| Base URL | `http://localhost:20128/v1` |
-| Embedding model | the 9Router model string, e.g. `emb/bge-m3` (`<node-prefix>/<model>`) |
-| API key | a key from the 9Router dashboard if 9Router has `requireApiKey` enabled; otherwise any non-empty dummy value |
+| Field             | Value                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Provider          | `OpenAI`                                                                                                                    |
+| Base URL          | `http://localhost:20128/v1`                                                                                                 |
+| Embedding model   | the 9Router model string, e.g. `emb/bge-m3` (`<node-prefix>/<model>`)                                                       |
+| API key           | a key from the 9Router dashboard if 9Router has `requireApiKey` enabled; otherwise any non-empty dummy value                |
 | Output dimensions | the model's native dimension (e.g. `1024` for `bge-m3`, `768` for `nomic-embed-text`); leave blank to use the model default |
 
 How the request is built:
@@ -143,10 +143,10 @@ context-engine exposes its retrieval as an **MCP server over streamable HTTP**,
 so coding agents can call it mid-conversation instead of blindly reading files.
 Two tools are published:
 
-| Tool | What it does |
-|------|--------------|
+| Tool                 | What it does                                                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `codebase-retrieval` | Semantic + graph search across an indexed repo. Ask in natural language ("where is auth handled?") and get ranked code with caller/callee context. |
-| `file-retrieval` | Given a file and a description, returns only the relevant line ranges instead of the whole file. |
+| `file-retrieval`     | Given a file and a description, returns only the relevant line ranges instead of the whole file.                                                   |
 
 ### Auto-setup (recommended)
 
@@ -155,11 +155,11 @@ In the web UI, open the **MCP** panel, pick your agent tab (**Claude Code**,
 the right config + prompt files directly into the repo (atomic, idempotent,
 never clobbers unrelated keys):
 
-| Agent | Files written |
-|-------|---------------|
+| Agent       | Files written                                                                                                                             |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Claude Code | `.mcp.json` (server entry), `.claude/settings.local.json` (`enableAllProjectMcpServers: true`, git-ignored), `CLAUDE.md` (usage guidance) |
-| Codex | `.codex/config.toml` (server entry), `AGENTS.md` (usage guidance) |
-| Opencode | `opencode.json` (server entry), `AGENTS.md` (usage guidance) |
+| Codex       | `.codex/config.toml` (server entry), `AGENTS.md` (usage guidance)                                                                         |
+| Opencode    | `opencode.json` (server entry), `AGENTS.md` (usage guidance)                                                                              |
 
 ### Manual setup
 
@@ -197,25 +197,25 @@ your self-hosted bge-m3 model on the GPU box, end to end.
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| Semantic code search | Finds code by meaning via embeddings, not literal text matching |
-| Multi-language parsing | Tree-sitter symbol extraction for 22 languages (see table below) |
-| Call-graph expansion | Resolves caller/callee edges and BFS-expands matched symbols at query time |
-| Import-path resolution | Traces imports to actual files for TS/JS, Python, Go, and Rust — resolves cross-module calls that name matching misses |
-| Framework-aware resolution | Detects React, Express, Django, Spring, Go Gin and produces routing/DI/rendering edges automatically |
-| Generated-file detection | Downranks protobuf stubs, gRPC scaffolding, mocks, and codegen outputs so hand-written code surfaces first |
-| Field-qualified search | Filter results with `kind:function`, `lang:rust`, `path:src/api`, `name:Handler` prefixes in queries |
-| Enriched caller/callee output | MCP results show symbol names `[callers: fn_a, fn_b +N more]` instead of bare counts |
-| Incremental indexing | Re-indexes only changed files (mtime + watcher), crash-safe via per-file commit markers |
-| Real-time file watching | `notify` (debounced) triggers re-index automatically on file changes |
-| Voyage AI embeddings | HTTP embedding client with an on-disk cache to avoid redundant API calls |
-| LLM reranking | Reorders candidate chunks with an LLM (OpenAI / Google); optional, can be disabled |
-| Embedded SurrealDB | Stores chunks, symbols, and edges; one datastore per repo |
-| HTTP API + Web UI | Settings management, index explorer, and a query test console |
-| MCP server | Exposes `codebase-retrieval` and `file-retrieval` tools over streamable HTTP |
-| SSE progress stream | Streams live indexing progress events to the UI |
-| Large-repo scaling | Bounded memory and no O(n²) paths — built for Linux/Chromium-scale codebases |
+| Feature                       | Description                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Semantic code search          | Finds code by meaning via embeddings, not literal text matching                                                        |
+| Multi-language parsing        | Tree-sitter symbol extraction for 22 languages (see table below)                                                       |
+| Call-graph expansion          | Resolves caller/callee edges and BFS-expands matched symbols at query time                                             |
+| Import-path resolution        | Traces imports to actual files for TS/JS, Python, Go, and Rust — resolves cross-module calls that name matching misses |
+| Framework-aware resolution    | Detects React, Express, Django, Spring, Go Gin and produces routing/DI/rendering edges automatically                   |
+| Generated-file detection      | Downranks protobuf stubs, gRPC scaffolding, mocks, and codegen outputs so hand-written code surfaces first             |
+| Field-qualified search        | Filter results with `kind:function`, `lang:rust`, `path:src/api`, `name:Handler` prefixes in queries                   |
+| Enriched caller/callee output | MCP results show symbol names `[callers: fn_a, fn_b +N more]` instead of bare counts                                   |
+| Incremental indexing          | Re-indexes only changed files (mtime + watcher), crash-safe via per-file commit markers                                |
+| Real-time file watching       | `notify` (debounced) triggers re-index automatically on file changes                                                   |
+| Voyage AI embeddings          | HTTP embedding client with an on-disk cache to avoid redundant API calls                                               |
+| LLM reranking                 | Reorders candidate chunks with an LLM (OpenAI / Google); optional, can be disabled                                     |
+| Embedded SurrealDB            | Stores chunks, symbols, and edges; one datastore per repo                                                              |
+| HTTP API + Web UI             | Settings management, index explorer, and a query test console                                                          |
+| MCP server                    | Exposes `codebase-retrieval` and `file-retrieval` tools over streamable HTTP                                           |
+| SSE progress stream           | Streams live indexing progress events to the UI                                                                        |
+| Large-repo scaling            | Bounded memory and no O(n²) paths — built for Linux/Chromium-scale codebases                                           |
 
 ## Supported Languages
 
@@ -223,29 +223,29 @@ Tree-sitter symbol extraction (functions, classes, methods, and call edges) is
 implemented per language. File extensions are mapped in `detect_language`
 (`src/parsing/mod.rs`).
 
-| Language | Extensions | Grammar |
-|----------|------------|---------|
-| Python | `.py` | `tree-sitter-python` |
-| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | `tree-sitter-javascript` |
-| TypeScript | `.ts` | `tree-sitter-typescript` |
-| TSX | `.tsx` | `tree-sitter-javascript` |
-| Rust | `.rs` | `tree-sitter-rust` |
-| Go | `.go` | `tree-sitter-go` |
-| Java | `.java` | `tree-sitter-java` |
-| C | `.c` | `tree-sitter-c` |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hxx`, `.hh` | `tree-sitter-cpp` |
-| C# | `.cs` | `tree-sitter-c-sharp` |
-| PHP | `.php` | `tree-sitter-php` |
-| Ruby | `.rb` | `tree-sitter-ruby` |
-| Objective-C | `.m`, `.mm` | `tree-sitter-objc` |
-| Swift | `.swift` | `tree-sitter-swift` |
-| Kotlin | `.kt`, `.kts` | `tree-sitter-kotlin` |
-| Dart | `.dart` | `tree-sitter-dart` |
-| Lua | `.lua` | `tree-sitter-lua` |
-| Luau | `.luau` | `tree-sitter-luau` |
-| Svelte | `.svelte` | `tree-sitter-javascript` (script block) |
-| Pascal | `.pas`, `.pp`, `.dpr`, `.lpr`, `.dpk` | `tree-sitter-pascal` |
-| Liquid | `.liquid` | `tree-sitter-liquid` |
+| Language    | Extensions                                         | Grammar                                 |
+| ----------- | -------------------------------------------------- | --------------------------------------- |
+| Python      | `.py`                                              | `tree-sitter-python`                    |
+| JavaScript  | `.js`, `.jsx`, `.mjs`, `.cjs`                      | `tree-sitter-javascript`                |
+| TypeScript  | `.ts`                                              | `tree-sitter-typescript`                |
+| TSX         | `.tsx`                                             | `tree-sitter-javascript`                |
+| Rust        | `.rs`                                              | `tree-sitter-rust`                      |
+| Go          | `.go`                                              | `tree-sitter-go`                        |
+| Java        | `.java`                                            | `tree-sitter-java`                      |
+| C           | `.c`                                               | `tree-sitter-c`                         |
+| C++         | `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hxx`, `.hh` | `tree-sitter-cpp`                       |
+| C#          | `.cs`                                              | `tree-sitter-c-sharp`                   |
+| PHP         | `.php`                                             | `tree-sitter-php`                       |
+| Ruby        | `.rb`                                              | `tree-sitter-ruby`                      |
+| Objective-C | `.m`, `.mm`                                        | `tree-sitter-objc`                      |
+| Swift       | `.swift`                                           | `tree-sitter-swift`                     |
+| Kotlin      | `.kt`, `.kts`                                      | `tree-sitter-kotlin`                    |
+| Dart        | `.dart`                                            | `tree-sitter-dart`                      |
+| Lua         | `.lua`                                             | `tree-sitter-lua`                       |
+| Luau        | `.luau`                                            | `tree-sitter-luau`                      |
+| Svelte      | `.svelte`                                          | `tree-sitter-javascript` (script block) |
+| Pascal      | `.pas`, `.pp`, `.dpr`, `.lpr`, `.dpk`              | `tree-sitter-pascal`                    |
+| Liquid      | `.liquid`                                          | `tree-sitter-liquid`                    |
 
 Files with any other extension are chunked and embedded for semantic search,
 but no symbols or call edges are extracted from them.
