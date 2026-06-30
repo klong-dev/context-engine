@@ -1641,11 +1641,17 @@
 
       // MCP
       'mcp.endpoint': { en: `Endpoint`, vi: `Endpoint`, zh: `端点` },
+      'mcp.vscode': { en: `VS Code`, vi: `VS Code`, zh: `VS Code` },
       'mcp.claudeCode': { en: `Claude Code`, vi: `Claude Code`, zh: `Claude Code` },
       'mcp.codex': { en: `Codex`, vi: `Codex`, zh: `Codex` },
       'mcp.opencode': { en: `Opencode`, vi: `Opencode`, zh: `Opencode` },
       'mcp.test': { en: `Test`, vi: `Test`, zh: `测试` },
       'mcp.endpointDesc': { en: `Streamable-HTTP MCP endpoint. Point any MCP-compatible client here.`, vi: `Endpoint MCP Streamable-HTTP. Trỏ bất kỳ client tương thích MCP nào tới đây.`, zh: `Streamable-HTTP MCP 端点。将任何兼容 MCP 的客户端指向此处。` },
+      'mcp.vscodeConfigDesc': {
+        en: `Writes <code class="font-mono text-xs px-1 py-0.5 rounded bg-gray-100 dark:bg-wiki-surface">.vscode/mcp.json</code> with BOTH servers: context-engine (semantic, HTTP) and codebase-memory (structural, stdio). Use Auto Setup to write it directly, or copy the snippet.`,
+        vi: `Ghi <code class="font-mono text-xs px-1 py-0.5 rounded bg-gray-100 dark:bg-wiki-surface">.vscode/mcp.json</code> với CẢ HAI server: context-engine (semantic, HTTP) và codebase-memory (structural, stdio). Dùng Auto Setup để ghi thẳng, hoặc copy snippet.`,
+        zh: `写入 <code class="font-mono text-xs px-1 py-0.5 rounded bg-gray-100 dark:bg-wiki-surface">.vscode/mcp.json</code>，包含两个服务器：context-engine（语义，HTTP）和 codebase-memory（结构，stdio）。使用 Auto Setup 直接写入，或复制代码片段。`
+      },
       'mcp.agentsMdDesc': {
         en: `Add the following to your project's <code class="font-mono text-xs px-1 py-0.5 rounded bg-gray-100 dark:bg-wiki-surface">AGENTS.md</code> so Codex prefers the context engine for codebase exploration.`,
         vi: `Thêm nội dung sau vào <code class="font-mono text-xs px-1 py-0.5 rounded bg-gray-100 dark:bg-wiki-surface">AGENTS.md</code> của dự án để Codex ưu tiên dùng context engine khi khám phá codebase.`,
@@ -3828,6 +3834,26 @@
       ].join('\n');
     }
 
+    // VS Code reads `.vscode/mcp.json` with a top-level `servers` map (NOT
+    // `mcpServers`). We emit BOTH servers the user runs together: context-engine
+    // over http (semantic) + the local codebase-memory binary over stdio
+    // (structural). `${userHome}` is a VS Code variable, kept literal so the
+    // config is portable across machines.
+    function buildVscodeMcpSnippet(endpointUrl) {
+      return JSON.stringify({
+        servers: {
+          "context-engine": {
+            type: "http",
+            url: endpointUrl,
+          },
+          "codebase-memory": {
+            type: "stdio",
+            command: "${userHome}\\AppData\\Local\\Programs\\codebase-memory-mcp\\codebase-memory-mcp.exe",
+          },
+        },
+      }, null, 2);
+    }
+
     function buildOpencodeConfigSnippet(endpointUrl) {
       return JSON.stringify({
         "$schema": "https://opencode.ai/config.json",
@@ -3969,6 +3995,7 @@
     // Repo MCP sub-tab definitions. IDs are generated per component instance so
     // repo detail and modal can coexist without duplicate IDs or shared listeners.
     const REPO_MCP_TABS = [
+      { key: 'vscode', labelKey: 'mcp.vscode' },
       { key: 'claude', labelKey: 'mcp.claudeCode' },
       { key: 'codex', labelKey: 'mcp.codex' },
       { key: 'opencode', labelKey: 'mcp.opencode' },
@@ -4044,7 +4071,25 @@
       ${tabHtml}
     </div>
 
-    <div role="tabpanel" id="${repoMcpId(prefix, 'panel', 'claude')}" data-mcp-panel="claude" aria-labelledby="${repoMcpId(prefix, 'tab', 'claude')}" class="${repoMcpPanelClass(true)}">
+    <div role="tabpanel" id="${repoMcpId(prefix, 'panel', 'vscode')}" data-mcp-panel="vscode" aria-labelledby="${repoMcpId(prefix, 'tab', 'vscode')}" class="${repoMcpPanelClass(true)}">
+      ${repoMcpAutoSetupBlock('vscode')}
+      <p class="text-sm text-gray-600 dark:text-wiki-text-muted mb-3">${escHtml(t('mcp.vscodeConfigDesc'))}</p>
+      <div class="relative">
+        <pre data-mcp-content="vscode-config"
+             class="font-mono text-sm px-3 py-2 pr-12 rounded border border-gray-200 dark:border-wiki-border
+                    bg-gray-50 dark:bg-wiki-surface text-gray-800 dark:text-wiki-link select-all whitespace-pre-wrap break-words block m-0"></pre>
+        ${repoMcpCopyButton('vscode-config')}
+      </div>
+      <p class="text-sm text-gray-600 dark:text-wiki-text-muted mt-6 mb-3">${t('mcp.agentsMdDesc')}</p>
+      <div class="relative">
+        <pre data-mcp-content="vscode-agents-md"
+             class="font-mono text-sm px-3 py-2 pr-12 rounded border border-gray-200 dark:border-wiki-border
+                    bg-gray-50 dark:bg-wiki-surface text-gray-800 dark:text-wiki-link select-all whitespace-pre-wrap break-words block m-0"></pre>
+        ${repoMcpCopyButton('vscode-agents-md')}
+      </div>
+    </div>
+
+    <div role="tabpanel" id="${repoMcpId(prefix, 'panel', 'claude')}" data-mcp-panel="claude" aria-labelledby="${repoMcpId(prefix, 'tab', 'claude')}" class="${repoMcpPanelClass(false)}">
       ${repoMcpAutoSetupBlock('claude')}
       <p class="text-sm text-gray-600 dark:text-wiki-text-muted mb-3">${escHtml(t('repo.claudeCmdDesc'))}</p>
       <div class="relative">
@@ -4157,8 +4202,10 @@
       setContent('claude-cmd', cmd);
       setContent('codex-config', buildCodexConfigSnippet(endpointUrl));
       setContent('opencode-config', buildOpencodeConfigSnippet(endpointUrl));
+      setContent('vscode-config', buildVscodeMcpSnippet(endpointUrl));
       setContent('agents-md', buildAgentsMdSnippet());
       setContent('opencode-agents-md', buildAgentsMdSnippet());
+      setContent('vscode-agents-md', buildAgentsMdSnippet());
       setContent('claude-md', buildClaudeMdSnippet());
 
       bindRepoMcpComponent(root, options);

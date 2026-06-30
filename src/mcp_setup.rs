@@ -44,6 +44,11 @@ pub enum Target {
     Claude,
     Codex,
     Opencode,
+    /// VS Code (`.vscode/mcp.json`). Unlike the other tools this writes TWO
+    /// servers — the context-engine HTTP endpoint AND the local
+    /// codebase-memory (cbm) stdio binary — so a single click wires up both
+    /// the semantic and structural MCP servers the user runs side by side.
+    Vscode,
 }
 
 impl Target {
@@ -52,6 +57,7 @@ impl Target {
             "claude" => Some(Target::Claude),
             "codex" => Some(Target::Codex),
             "opencode" => Some(Target::Opencode),
+            "vscode" => Some(Target::Vscode),
             _ => None,
         }
     }
@@ -131,6 +137,10 @@ pub fn run_setup(repo_root: &Path, target: Target, endpoint_url: &str) -> Vec<Fi
             write_opencode_json(repo_root, endpoint_url),
             write_prompt_file(repo_root, "AGENTS.md"),
         ],
+        Target::Vscode => vec![
+            write_vscode_mcp_json(repo_root, endpoint_url),
+            write_prompt_file(repo_root, "AGENTS.md"),
+        ],
     }
 }
 
@@ -188,12 +198,18 @@ fn read_json_object(path: &Path) -> Result<Option<Map<String, Value>>, String> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(format!("read: {e}")),
         Ok(text) => {
+            // Strip a UTF-8 BOM if present. Windows editors and PowerShell's
+            // `Set-Content -Encoding UTF8` prepend EF BB BF, which serde_json
+            // rejects with "expected value at line 1 column 1" — so a perfectly
+            // valid config written by another tool would be misreported as
+            // malformed and left untouched. Trimming the BOM is lossless.
+            let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
             if text.trim().is_empty() {
                 // Empty file → treat as a fresh object (common when a tool
                 // pre-creates an empty config). Not malformed.
                 return Ok(Some(Map::new()));
             }
-            match serde_json::from_str::<Value>(&text) {
+            match serde_json::from_str::<Value>(text) {
                 Ok(Value::Object(obj)) => Ok(Some(obj)),
                 Ok(_) => Err("file is valid JSON but not an object".to_string()),
                 Err(e) => Err(format!("malformed JSON: {e}")),
@@ -390,6 +406,63 @@ fn write_opencode_json(repo_root: &Path, endpoint_url: &str) -> FileAction {
         changed = true;
     }
     mcp.insert(SERVER_NAME.into(), Value::Object(desired));
+
+    commit_json(&path, REL, &root, existed, changed)
+}
+
+// ─── VS Code: .vscode/mcp.json ─────────────────────────────────────────────
+
+/// Path to the codebase-memory (cbm) binary, written into `.vscode/mcp.json`
+/// using VS Code's `${userHome}` variable so the config is portable across
+/// machines (the install location under the user profile is fixed by cbm's
+/// installer). Backslashes are JSON-escaped by serde on serialize.
+const CBM_COMMAND: &str =
+    "${userHome}\\AppData\\Local\\Programs\\codebase-memory-mcp\\codebase-memory-mcp.exe";
+
+/// Write BOTH MCP servers into `.vscode/mcp.json`:
+///   * `context-engine`   — http, this repo's `/mcp-repo/<sanitized>` endpoint
+///   * `codebase-memory`  — stdio, the local cbm binary (structural graph)
+///
+/// VS Code reads `{ "servers": { ... } }` (note: `servers`, not `mcpServers`
+/// like Claude). We merge into any existing file, preserving unrelated servers
+/// and top-level keys, and only flag `changed` when a value actually differs —
+/// so re-running tracks the live port without churning the file.
+fn write_vscode_mcp_json(repo_root: &Path, endpoint_url: &str) -> FileAction {
+    const REL: &str = ".vscode/mcp.json";
+    let path = match safe_join(repo_root, REL) {
+        Ok(p) => p,
+        Err(e) => return error_action(REL, e),
+    };
+    let existed = path.exists();
+    let mut root = match read_json_object(&path) {
+        Ok(Some(obj)) => obj,
+        Ok(None) => Map::new(),
+        Err(e) => return error_action(REL, e),
+    };
+
+    let servers = root
+        .entry("servers")
+        .or_insert_with(|| Value::Object(Map::new()));
+    let Some(servers) = servers.as_object_mut() else {
+        return error_action(REL, "`servers` exists but is not an object".to_string());
+    };
+
+    // context-engine (http, semantic).
+    let mut ce = Map::new();
+    ce.insert("type".into(), Value::String("http".into()));
+    ce.insert("url".into(), Value::String(endpoint_url.to_string()));
+    let ce_val = Value::Object(ce);
+
+    // codebase-memory (stdio, structural).
+    let mut cbm = Map::new();
+    cbm.insert("type".into(), Value::String("stdio".into()));
+    cbm.insert("command".into(), Value::String(CBM_COMMAND.into()));
+    let cbm_val = Value::Object(cbm);
+
+    let changed = servers.get("context-engine") != Some(&ce_val)
+        || servers.get("codebase-memory") != Some(&cbm_val);
+    servers.insert("context-engine".into(), ce_val);
+    servers.insert("codebase-memory".into(), cbm_val);
 
     commit_json(&path, REL, &root, existed, changed)
 }
