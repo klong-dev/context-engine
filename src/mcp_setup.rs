@@ -33,6 +33,12 @@ const GUIDANCE_CODEBASE: &str = "When asked about the codebase, project structur
 /// Appended when the prompt file does not already mention `file-retrieval`.
 const GUIDANCE_FILE: &str = "When you need to read a specific file but don't know the exact line range, use the file-retrieval MCP tool instead of reading the entire file. Describe what information you need and it returns only the relevant snippets with line numbers. Use the Read tool with the returned line ranges (expanded as needed) to get current content before making edits.";
 
+/// Appended (VS Code target only) when the prompt file does not already mention
+/// `codebase-memory`. The cbm server is a code KNOWLEDGE GRAPH (structure,
+/// call/import/data-flow), not a notes store — distinct from context-engine's
+/// semantic retrieval, so agents need explicit guidance on when to reach for it.
+const GUIDANCE_MEMORY: &str = "For architecture, call-graph, impact analysis, and structural questions ('what calls X', 'what breaks if I change Y', module boundaries, hot-paths), use the codebase-memory MCP tools (search_graph, trace_path, query_graph, get_architecture) instead of grep. Use it before large refactors to trace callers/callees and data-flow across the code knowledge graph. codebase-memory is a structural graph of the code, not a notes store; use context-engine (codebase-retrieval) for semantic 'where is / what does this code say' lookups and codebase-memory for 'how is it connected / what is the impact' analysis.";
+
 /// MCP server name written into every tool's config.
 const SERVER_NAME: &str = "codebase-retrieval";
 
@@ -139,7 +145,7 @@ pub fn run_setup(repo_root: &Path, target: Target, endpoint_url: &str) -> Vec<Fi
         ],
         Target::Vscode => vec![
             write_vscode_mcp_json(repo_root, endpoint_url),
-            write_prompt_file(repo_root, "AGENTS.md"),
+            write_prompt_file_ex(repo_root, "AGENTS.md", true),
         ],
     }
 }
@@ -575,6 +581,13 @@ fn write_codex_config_toml(repo_root: &Path, endpoint_url: &str) -> FileAction {
 /// missing blocks (no `# CLAUDE.md` header). Existing content is never
 /// rewritten — blocks are appended at the end.
 fn write_prompt_file(repo_root: &Path, rel: &str) -> FileAction {
+    write_prompt_file_ex(repo_root, rel, false)
+}
+
+/// Like `write_prompt_file`, but when `include_memory` is set also appends
+/// `GUIDANCE_MEMORY` (codebase-memory / cbm guidance). Only the VS Code target
+/// wires up the cbm stdio server, so only it opts in.
+fn write_prompt_file_ex(repo_root: &Path, rel: &str, include_memory: bool) -> FileAction {
     let path = match safe_join(repo_root, rel) {
         Ok(p) => p,
         Err(e) => return error_action(rel, e),
@@ -588,7 +601,8 @@ fn write_prompt_file(repo_root: &Path, rel: &str) -> FileAction {
 
     let need_codebase = !current.contains("codebase-retrieval");
     let need_file = !current.contains("file-retrieval");
-    if !need_codebase && !need_file {
+    let need_memory = include_memory && !current.contains("codebase-memory");
+    if !need_codebase && !need_file && !need_memory {
         return FileAction {
             file: rel_label(rel),
             status: if existed {
@@ -617,6 +631,9 @@ fn write_prompt_file(repo_root: &Path, rel: &str) -> FileAction {
     }
     if need_file {
         append_block(GUIDANCE_FILE);
+    }
+    if need_memory {
+        append_block(GUIDANCE_MEMORY);
     }
     if !out.ends_with('\n') {
         out.push('\n');
